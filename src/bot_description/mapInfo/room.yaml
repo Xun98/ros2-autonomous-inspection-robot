@@ -1,7 +1,7 @@
 image: room.pgm
 mode: trinary
 resolution: 0.050
-origin: [-4.502, -6.177, 0]
+origin: [-4.060, -5.931, 0]
 negate: 0
 occupied_thresh: 0.65
 free_thresh: 0.196
