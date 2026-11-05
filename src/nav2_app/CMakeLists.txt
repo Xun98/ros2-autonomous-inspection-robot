@@ -9,19 +9,34 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(rclcpp_action)
 
 add_executable(initpose_pub src/initpose_pub.cpp)
-
 ament_target_dependencies(initpose_pub
   rclcpp
   geometry_msgs
   tf2
 )
 
+
+add_executable(to_goal src/to_goal.cpp)
+ament_target_dependencies(to_goal
+  rclcpp
+  rclcpp_action
+  nav2_msgs
+)
+
 install(TARGETS
   initpose_pub
+  to_goal
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)
