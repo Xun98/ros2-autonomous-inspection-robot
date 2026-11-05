@@ -26,6 +26,7 @@ ament_target_dependencies(to_goal
   rclcpp
   rclcpp_action
   nav2_msgs
+  tf2
 )
 
 install(TARGETS
@@ -36,6 +37,7 @@ install(TARGETS
 
 install(DIRECTORY
   launch
+  config
   DESTINATION share/${PROJECT_NAME}/
 )
 

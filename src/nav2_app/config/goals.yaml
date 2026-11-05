@@ -1,0 +1,7 @@
+nav2_action_client:
+  ros__parameters:
+    goal_count: 4
+    goal_0: [0.0, 0.0, 0.00] #起点/终点
+    goal_1: [0.0, 4.0, 1.57]
+    goal_2: [3.0, 4.0, 3.14]
+    goal_3: [3.0, 0.0, -1.57]

@@ -1,6 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
+#include "tf2/LinearMath/Quaternion.h"
 #include <queue>
 
 class Nav2ActionClient : public rclcpp::Node
@@ -13,18 +14,7 @@ public:
     {
         action_client_ = rclcpp_action::create_client<NavigateToPoseAction>(
             this, "navigate_to_pose");
-
-        auto goal_msg = NavigateToPoseAction::Goal();
-        goal_msg.pose.header.frame_id = "map";
-        goal_msg.pose.header.stamp = this->now();
-        goal_msg.pose.pose.position.x = 0;
-        goal_msg.pose.pose.position.y = 0;
-        goal_msg.pose.pose.orientation.w = 1.0;
-        goals.push_back(goal_msg); // init
-
-        goal_msg.pose.pose.position.x = 0;
-        goal_msg.pose.pose.position.y = 2.0;
-        goals.push_back(goal_msg);
+        load_goals();
 
         cur = 1;
 
@@ -101,6 +91,46 @@ public:
     }
 
 private:
+
+    void load_goals()
+    {
+        int goal_count = this->declare_parameter<int>("goal_count", 0);
+        if(goal_count < 2)
+        {
+            throw std::runtime_error("goal only start");
+        }
+
+        for (int i = 0; i < goal_count; ++i)
+        {
+            std::string name = "goal_" + std::to_string(i);
+            auto point = this->declare_parameter<std::vector<double>>(
+                name, {});
+
+            if (point.size() != 3)
+            {
+                RCLCPP_ERROR(
+                    get_logger(),
+                    "Invalid parameter: %s", name.c_str());
+
+                throw std::runtime_error("Invalid goal configuration");
+            }
+
+            auto goal_msg = NavigateToPoseAction::Goal();
+            goal_msg.pose.header.frame_id = "map";
+            goal_msg.pose.header.stamp = this->now();
+            goal_msg.pose.pose.position.x = point[0];
+            goal_msg.pose.pose.position.y = point[1];
+
+            tf2::Quaternion q;
+            q.setRPY(0.0, 0.0, point[3]);
+            goal_msg.pose.pose.orientation.x = q.getX();
+            goal_msg.pose.pose.orientation.y = q.getY();
+            goal_msg.pose.pose.orientation.z = q.getZ();
+            goal_msg.pose.pose.orientation.w = q.getW();
+
+            goals.push_back(goal_msg);
+        }
+    }
     rclcpp_action::Client<NavigateToPoseAction>::SharedPtr action_client_;
     std::vector<NavigateToPoseAction::Goal> goals;
     int cur = 0;
