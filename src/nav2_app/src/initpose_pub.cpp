@@ -13,7 +13,11 @@ public:
   : Node("initpose_publisher")
   {
     publisher_ = this->create_publisher<PoseMsg>("/initialpose", 10);
-
+    pose_ = declare_parameter<std::vector<double>>("init_pose", {.0, .0, .0});
+    if(pose_.size() != 3)
+    {
+      throw std::runtime_error("Invalid init_pose");
+    }
     // 每隔 500ms 检查一次 AMCL 是否已经订阅
       timer_ = this->create_wall_timer(
         std::chrono::milliseconds(500),
@@ -29,17 +33,17 @@ public:
 
   void pub_initpose()
   {
-            PoseMsg message;
+        PoseMsg message;
         message.header.frame_id = "map";
         message.header.stamp = this->get_clock()->now();
         auto &position = message.pose.pose.position;
         auto &orientation = message.pose.pose.orientation;
-        position.x = .0;
-        position.y = .0;
+        position.x = pose_[0];
+        position.y = pose_[1];
         position.z = .0;
 
         tf2::Quaternion q;
-        q.setRPY(0.0, 0.0, 0.0);
+        q.setRPY(0.0, 0.0, pose_[2]);
         orientation.x = q.getX();
         orientation.y = q.getY();
         orientation.z = q.getZ();
@@ -58,6 +62,7 @@ private:
 
   rclcpp::Publisher<PoseMsg>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
+  std::vector<double> pose_;
 };
 
 int main(int argc, char * argv[])
