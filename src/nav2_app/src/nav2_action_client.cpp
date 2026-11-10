@@ -1,4 +1,4 @@
-#include "to_goal.h"
+#include "nav2_action_client.h"
 
 Nav2ActionClient::Nav2ActionClient() : Node("nav2_action_client")
 {
@@ -124,7 +124,7 @@ void Nav2ActionClient::on_failed()
         RCLCPP_WARN(get_logger(), "Navigation failed, retry %d/%d", retry_count, RETRY_COUNT);
 
         retry_timer_ = create_wall_timer(
-            std::chrono::seconds(1),
+            std::chrono::seconds(2),
             [this]()
             {
                 retry_timer_->cancel();

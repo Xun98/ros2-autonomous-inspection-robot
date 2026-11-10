@@ -4,6 +4,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
 
 class InitPosePublisher : public rclcpp::Node
 {
@@ -12,22 +14,33 @@ public:
   InitPosePublisher()
   : Node("initpose_publisher")
   {
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
     publisher_ = this->create_publisher<PoseMsg>("/initialpose", 10);
     pose_ = declare_parameter<std::vector<double>>("init_pose", {.0, .0, .0});
-    if(pose_.size() != 3)
+    if (pose_.size() != 3)
     {
       throw std::runtime_error("Invalid init_pose");
     }
-    // 每隔 500ms 检查一次 AMCL 是否已经订阅
-      timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(500),
-        [this]() {
-            if (publisher_->get_subscription_count() == 0) {
-                return;
-            }
-            pub_initpose();
+    // 每隔 1s 检查一次 map 是否存在, 不存在发布初始位置
+    timer_ = this->create_wall_timer(
+        std::chrono::seconds(1),
+        [this]()
+        {
+          if (tf_buffer_->canTransform("map", "odom", tf2::TimePointZero))
+          {
+            RCLCPP_INFO(get_logger(), "map -> odom transform exists. Skip initial pose.");
             timer_->cancel();
             rclcpp::shutdown();
+            return;
+          }
+
+          if (publisher_->get_subscription_count() != 0)
+          {
+            pub_initpose();
+          }
         });
   }
 
@@ -59,6 +72,8 @@ public:
 
   
 private:
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   rclcpp::Publisher<PoseMsg>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr timer_;

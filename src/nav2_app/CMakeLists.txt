@@ -11,33 +11,34 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(tf2 REQUIRED)
-find_package(rclcpp_action)
+find_package(rclcpp_action REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 add_executable(initpose_pub src/initpose_pub.cpp)
 ament_target_dependencies(initpose_pub
   rclcpp
   geometry_msgs
   tf2
+  tf2_ros
 )
 
-
-add_executable(to_goal src/to_goal.cpp)
-ament_target_dependencies(to_goal
+add_executable(nav2_action_client src/nav2_action_client.cpp)
+ament_target_dependencies(nav2_action_client
   rclcpp
   rclcpp_action
   nav2_msgs
   tf2
+  tf2_ros
 )
 
 install(TARGETS
   initpose_pub
-  to_goal
+  nav2_action_client
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY
-  launch
-  config
+  launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 
