@@ -6,21 +6,13 @@ Nav2ActionClient::Nav2ActionClient() : Node("nav2_action_client")
         this, "navigate_to_pose");
     load_goals();
 
-    send_goal();
+    start_patrol();
 }
 
 void Nav2ActionClient::send_goal()
 {
-
-    if (!action_client_->wait_for_action_server(
-            std::chrono::seconds(10)))
-    {
-        RCLCPP_ERROR(
-            this->get_logger(),
-            "NavigateToPose action server not available");
-
+    if (state == State::FINISHED)
         return;
-    }
 
     auto send_goal_options = rclcpp_action::Client<NavigateToPoseAction>::SendGoalOptions();
     send_goal_options.goal_response_callback =
@@ -28,18 +20,7 @@ void Nav2ActionClient::send_goal()
     {
         if (!goal_handle)
         {
-            RCLCPP_WARN(
-                get_logger(),
-                "Goal rejected, retry after 1 second");
-
-            retry_timer_ = this->create_wall_timer(
-                std::chrono::seconds(1),
-                [this]()
-                {
-                    retry_timer_->cancel();
-                    send_goal();
-                });
-
+            on_failed();
             return;
         }
 
@@ -57,37 +38,106 @@ void Nav2ActionClient::send_goal()
         switch (result.code)
         {
         case rclcpp_action::ResultCode::SUCCEEDED:
+            on_success();
             break;
-        case rclcpp_action::ResultCode::ABORTED:
-            RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
-            return;
         case rclcpp_action::ResultCode::CANCELED:
-            RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
-            return;
-        default:
-            RCLCPP_ERROR(this->get_logger(), "Unknown result code");
-            return;
-        }
+            break;
 
-        cur_goals_index = (cur_goals_index + 1) % goals.size();
-        send_goal();
+        case rclcpp_action::ResultCode::ABORTED:
+        default:
+            on_failed();
+            RCLCPP_ERROR(this->get_logger(), "Unknown result code");
+            break;
+        }
     };
 
-
     auto goal_msg = NavigateToPoseAction::Goal();
-        goal_msg.pose.header.frame_id = "map";
-        goal_msg.pose.pose.position.x = goals[cur_goals_index].x;
-        goal_msg.pose.pose.position.y = goals[cur_goals_index].y;
+    goal_msg.pose.header.frame_id = "map";
+    goal_msg.pose.pose.position.x = goals[cur_goals_index].x;
+    goal_msg.pose.pose.position.y = goals[cur_goals_index].y;
 
-        tf2::Quaternion q;
-        q.setRPY(0.0, 0.0, goals[cur_goals_index].yaw);
-        goal_msg.pose.pose.orientation.x = q.getX();
-        goal_msg.pose.pose.orientation.y = q.getY();
-        goal_msg.pose.pose.orientation.z = q.getZ();
-        goal_msg.pose.pose.orientation.w = q.getW();
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, goals[cur_goals_index].yaw);
+    goal_msg.pose.pose.orientation.x = q.getX();
+    goal_msg.pose.pose.orientation.y = q.getY();
+    goal_msg.pose.pose.orientation.z = q.getZ();
+    goal_msg.pose.pose.orientation.w = q.getW();
 
     goal_msg.pose.header.stamp = get_clock()->now();
     action_client_->async_send_goal(goal_msg, send_goal_options);
+}
+
+void Nav2ActionClient::start_patrol()
+{
+
+    if (!action_client_->wait_for_action_server(
+            std::chrono::seconds(10)))
+    {
+        RCLCPP_ERROR(
+            this->get_logger(),
+            "NavigateToPose action server not available");
+
+        return;
+    }
+
+    if (state != State::IDLE)
+    {
+        return;
+    }
+
+    cur_goals_index = 0;
+    cur_rounds = 0;
+    retry_count = 0;
+
+    send_goal();
+}
+
+void Nav2ActionClient::on_success()
+{
+    retry_count = 0;
+
+    cur_goals_index++;
+    if (cur_goals_index == goals.size())
+    {
+        cur_rounds++;
+        cur_goals_index = 0;
+    }
+
+    if (cur_rounds == max_rounds)
+    {
+        state = State::FINISHED;
+        RCLCPP_INFO(get_logger(), "Patrol finished");
+        rclcpp::shutdown();
+        return;
+    }
+
+    send_goal();
+}
+void Nav2ActionClient::on_failed()
+{
+    state = State::ERROR;
+
+    if (retry_count < RETRY_COUNT)
+    {
+        ++retry_count;
+
+        RCLCPP_WARN(get_logger(), "Navigation failed, retry %d/%d", retry_count, RETRY_COUNT);
+
+        retry_timer_ = create_wall_timer(
+            std::chrono::seconds(1),
+            [this]()
+            {
+                retry_timer_->cancel();
+
+                send_goal();
+            });
+    }
+    else
+    {
+        RCLCPP_ERROR(get_logger(), "Navigation failed, retry limit reached");
+        state = State::FINISHED;
+        rclcpp::shutdown();
+    }
 }
 
 void Nav2ActionClient::load_goals()
@@ -110,7 +160,7 @@ void Nav2ActionClient::load_goals()
     {
         PatrolPoint point;
         point.name = "goal_" + std::to_string(i);
-        
+
         auto pose = declare_parameter<std::vector<double>>(point.name + ".pose", {.0, .0, .0});
         if (pose.size() != 3)
         {

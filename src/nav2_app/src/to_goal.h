@@ -30,11 +30,17 @@ public:
 
     Nav2ActionClient();
 
-    void send_goal();
+    void start_patrol();
 
 private:
 
     void load_goals();
+    
+    void send_goal();
+
+    void on_success();
+    void on_failed();
+
     rclcpp_action::Client<NavigateToPoseAction>::SharedPtr action_client_;
     std::vector<PatrolPoint> goals;
     int cur_goals_index = 0;
@@ -42,6 +48,8 @@ private:
 
     int max_rounds;
     int cur_rounds;
-    State state;
+    State state = State::IDLE;
+
     int retry_count;
+    const int RETRY_COUNT = 3;
 };
