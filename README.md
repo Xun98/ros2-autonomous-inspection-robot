@@ -46,13 +46,57 @@ sudo apt install -y \
     ros-jazzy-ros-gz-image \
     ros-jazzy-slam-toolbox
 ```
-### 2.2 运行
-**1.构建**
+**5. 克隆源码**
 ```
+git clone https://github.com/Xun98/ros2-autonomous-inspection-robot.git
+```    
+### 2.2 运行
+**1.设置巡检点及相关配置**
+
+修改ros2-autonomous-inspection-robot/src/nav2_app/config/goals.yaml文件，例：
+```
+nav2_action_client:
+  ros__parameters:
+    init_pose: [0.0, 0.0, 0.00] # 小车初始位置 x, y, yaw(rad)
+    max_rounds: 2
+
+    goal_count: 3 #目标点个数
+
+#具体目标点信息
+    goal_1.pose: [0.0, 4.0, 1.57]
+    goal_1.need_capture: false #是否拍照
+
+    goal_2.pose: [3.0, 4.0, 3.14]
+    goal_2.need_capture: false
+
+    goal_3.pose: [3.0, 0.0, -1.57]
+    goal_3.need_capture: false
+```
+**2.构建**
+```
+cd ros2-autonomous-inspection-robot
 colcon build
 . install/setup.sh
 ```
-**2.运行**
+**3.运行**
 ```
 ros2 launch bot_bringup bringup.launch.py
 ```
+## 3.运行效果展示
+1. 导航到目标点
+
+<p align="center">
+  <img src="./images/NavigationVisualization1.png" width="80%">
+</p>
+
+2. 新增临时障碍物
+
+<p align="center">
+  <img src="./images/NavigationVisualization2.png" width="80%">
+</p>
+
+3. 通过临时障碍物
+
+<p align="center">
+  <img src="./images/NavigationVisualization3.png" width="80%">
+</p>
