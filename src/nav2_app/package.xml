@@ -12,6 +12,8 @@
   <buildtool_depend>geometry_msgs</buildtool_depend>
   <buildtool_depend>tf2</buildtool_depend>
   <buildtool_depend>tf2_ros</buildtool_depend>
+  <buildtool_depend>sensor_msgs</buildtool_depend>
+  <buildtool_depend>cv_bridge</buildtool_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

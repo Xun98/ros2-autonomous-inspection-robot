@@ -2,6 +2,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "tf2/LinearMath/Quaternion.h"
+#include "sensor_msgs/msg/image.hpp"
 #include <queue>
 
 class Nav2ActionClient : public rclcpp::Node
@@ -40,6 +41,13 @@ private:
 
     void on_success();
     void on_failed();
+
+    void save_image();
+
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
+    sensor_msgs::msg::Image image;
+    std::mutex image_mtx;
+    const std::string IMAGE_DIR = "/tmp/images/";
 
     rclcpp_action::Client<NavigateToPoseAction>::SharedPtr action_client_;
     std::vector<PatrolPoint> goals;

@@ -5,10 +5,10 @@ nav2_action_client:
     goal_count: 3
 
     goal_1.pose: [0.0, 4.0, 1.57]
-    goal_1.need_capture: false
+    goal_1.need_capture: true
 
     goal_2.pose: [3.0, 4.0, 3.14]
     goal_2.need_capture: false
 
     goal_3.pose: [3.0, 0.0, -1.57]
-    goal_3.need_capture: false
+    goal_3.need_capture: true

@@ -13,6 +13,8 @@ find_package(nav2_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 add_executable(initpose_pub src/initpose_pub.cpp)
 ament_target_dependencies(initpose_pub
@@ -29,6 +31,8 @@ ament_target_dependencies(nav2_action_client
   nav2_msgs
   tf2
   tf2_ros
+  sensor_msgs
+  cv_bridge
 )
 
 install(TARGETS

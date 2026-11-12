@@ -82,6 +82,7 @@ colcon build
 ```
 ros2 launch bot_bringup bringup.launch.py
 ```
+备注：程序运行后小车会自行依次前往goals.yaml文件中设置的目标点，如果目标点设置了需要拍照，到达目标点后，将保存采集的照片到/tmp/images/文件夹，图片命名为：[目标点名称]_[拍照时间].jpg
 ## 3.运行效果展示
 1. 导航到目标点
 

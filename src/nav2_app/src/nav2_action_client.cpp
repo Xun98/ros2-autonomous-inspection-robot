@@ -1,7 +1,19 @@
 #include "nav2_action_client.h"
+#include <cv_bridge/cv_bridge.hpp>
+#include <opencv2/opencv.hpp>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+#include <filesystem>
 
 Nav2ActionClient::Nav2ActionClient() : Node("nav2_action_client")
 {
+    subscription_ = create_subscription<sensor_msgs::msg::Image>("/depth_camera/image_raw", 10,
+    [this](sensor_msgs::msg::Image msg){
+        std::lock_guard<std::mutex> lock(image_mtx);
+        image = std::move(msg);
+    });
+
     action_client_ = rclcpp_action::create_client<NavigateToPoseAction>(
         this, "navigate_to_pose");
     load_goals();
@@ -9,10 +21,35 @@ Nav2ActionClient::Nav2ActionClient() : Node("nav2_action_client")
     start_patrol();
 }
 
+void Nav2ActionClient::save_image()
+{   
+    state = State::CAPTURIN;
+    std::filesystem::create_directories(IMAGE_DIR);
+
+    cv::Mat image = cv_bridge::toCvCopy( this->image, "bgr8" )->image;
+
+    // 获取时间字符串
+    time_t timestamp = this->get_clock()->now().seconds();
+    std::tm tm_time;
+    localtime_r(&timestamp, &tm_time);
+    std::stringstream ss;
+    ss << std::put_time(&tm_time, "%Y-%m-%d_%H-%M-%S");
+    std::string time_str = ss.str();
+
+    std::string image_path = IMAGE_DIR + goals[cur_goals_index].name + "_" + time_str + ".jpg";
+
+    cv::imwrite(image_path, image);
+
+    RCLCPP_INFO(get_logger(), "Saved image to: %s", image_path.c_str());
+}
+
+
 void Nav2ActionClient::send_goal()
 {
     if (state == State::FINISHED)
         return;
+    
+    state = State::NAVIGATION;
 
     auto send_goal_options = rclcpp_action::Client<NavigateToPoseAction>::SendGoalOptions();
     send_goal_options.goal_response_callback =
@@ -96,12 +133,18 @@ void Nav2ActionClient::on_success()
 {
     retry_count = 0;
 
+    if(goals[cur_goals_index].need_capture)
+    {
+        save_image();
+    }
+
     cur_goals_index++;
     if (cur_goals_index == goals.size())
     {
         cur_rounds++;
         cur_goals_index = 0;
     }
+
 
     if (cur_rounds == max_rounds)
     {
